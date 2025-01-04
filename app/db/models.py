@@ -20,10 +20,12 @@ class Task(Base):
 class UserInDB(Base):
     __tablename__ = "user"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_name = Column(String(100))
-    email = Column(String(100))
-    disabled = Column(Boolean, default=False)
+    user_name = Column(String(100), unique=True)
+    email = Column(String(100), unique=True)
+    disabled = Column(Boolean, default=True)
     hashed_password = Column(String(255))
+    created_at = Column(TIMESTAMP, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at = Column(TIMESTAMP, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     role_id = Column(Integer, ForeignKey("role.id"))
 
     # role: Mapped["Role"] = relationship("Role", back_populates="users")

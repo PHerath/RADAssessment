@@ -13,11 +13,20 @@ class TokenData(BaseModel):
 
 
 class User(BaseModel):
-    username: str
-    email: Optional[str] = None
-    full_name: Optional[str] = None
-    disabled: Optional[bool] = None
+    user_name: str
+    email: str
+    password: str
+    confirm_password: str
+    role: str
 
 
-class UserInDB(User):
-    hashed_password: str
+class CreateUserResponse(BaseModel):
+    user_name: str
+    email: str
+
+    class Config:
+        from_attributes = True
+
+
+# class UserInDB(User):
+#     hashed_password: str
