@@ -1,0 +1,12 @@
+services:
+  rad_assessment_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.dev
+    ports:
+      - "1016:8000"
+    restart: always
+    container_name: rad_assessment_service_container
+    image: rad_assessment_service:v1.0.0
