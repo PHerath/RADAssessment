@@ -8,6 +8,15 @@ from exception.exception import CrudException
 logger = logging.getLogger(__name__)
 
 
+async def get_all_users(db):
+    try:
+        users = db.query(UserInDB).all()
+        return users
+    except SQLAlchemyError as e:
+        logger.error(f"An error occurred while fetching user data in the database: {e}")
+        raise CrudException("Unable to get the user data due to a database error.")
+
+
 async def get_user(user_name: str, db):
     try:
         exist_user = db.query(UserInDB).filter(UserInDB.user_name == user_name).one_or_none()
@@ -64,6 +73,15 @@ async def get_user_role(role: str, db):
             logger.warning("Role does not exist")
             return None
         return exist_role
+    except SQLAlchemyError as e:
+        logger.error("An error occurred while fetching user data in the database.", exc_info=e)
+        raise CrudException("Unable to get the user data due to a database error.")
+
+
+async def get_user_roles(db):
+    try:
+        exist_user_roles = db.query(Role).all()
+        return exist_user_roles
     except SQLAlchemyError as e:
         logger.error("An error occurred while fetching user data in the database.", exc_info=e)
         raise CrudException("Unable to get the user data due to a database error.")

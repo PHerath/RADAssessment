@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Request
 from starlette.responses import JSONResponse
-from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_401_UNAUTHORIZED
 
-from exception.exception import CrudException, NoDataFoundException, BadRequestException
+from exception.exception import CrudException, NoDataFoundException, BadRequestException, UnauthorizedException
 
 
 def add_exception_handler(app: FastAPI):
@@ -27,5 +27,11 @@ def add_exception_handler(app: FastAPI):
     @app.exception_handler(BadRequestException)
     async def handle_bad_request_exception(_request: Request, exc: BadRequestException):
         return JSONResponse(status_code=HTTP_400_BAD_REQUEST,
+                            content={'success': False,
+                                     'message': exc.message})
+
+    @app.exception_handler(UnauthorizedException)
+    async def handle_unauthorized_exception(_request: Request, exc: UnauthorizedException):
+        return JSONResponse(status_code=HTTP_401_UNAUTHORIZED,
                             content={'success': False,
                                      'message': exc.message})

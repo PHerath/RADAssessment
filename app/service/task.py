@@ -1,6 +1,6 @@
 import datetime
 
-from crud.task import create, get, update, delete
+from crud.task import create, get, update, delete, get_all
 from db.models import Task
 from exception.exception import NoDataFoundException
 from models.task import TaskModel, CreateTaskResponse
@@ -10,6 +10,12 @@ async def create_new_task(task: TaskModel, db):
     _task = Task(name=task.name, type=task.type, description=task.description)
     created_task = await create(_task, db)
     return CreateTaskResponse.model_validate(created_task)
+
+
+async def get_all_task(db):
+    _task_list = await get_all(db)
+    task_list = [CreateTaskResponse.model_validate(_task) for _task in _task_list]
+    return task_list
 
 
 async def get_task(task_id: int, db):

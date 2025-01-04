@@ -1,11 +1,11 @@
 import datetime
 import logging
 
-from crud.user import get_user, create_user, update_user, delete_user, get_user_role
+from crud.user import get_user, create_user, update_user, delete_user, get_user_role, get_all_users, get_user_roles
 from db.models import UserInDB
 from exception.exception import NoDataFoundException, BadRequestException
-from middleware.auth import get_password_hash
 from models.auth import User, CreateUserResponse
+from util.util import get_password_hash
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,12 @@ async def add_new_user(user: User, db):
     )
     created_user = await create_user(_user, db)
     return CreateUserResponse.model_validate(created_user)
+
+
+async def get_all_user_data(db):
+    users = await get_all_users(db)
+    list_of_users = [CreateUserResponse.model_validate(_user) for _user in users]
+    return list_of_users
 
 
 async def get_user_data(user_name: str, db):
@@ -53,3 +59,9 @@ async def modify_user(user_name: str, user: User, db):
 async def remove_user(user_name: str, db):
     _ = await delete_user(user_name, db)
     return True
+
+
+async def user_roles(db):
+    _user_roles = await get_user_roles(db)
+    _roles = [user_role.role_name for user_role in _user_roles]
+    return _roles

@@ -1,13 +1,10 @@
-from fastapi import HTTPException, Depends, status, APIRouter
-from typing import List, Annotated
+from fastapi import Depends, APIRouter
 
-from crud.user import create_user, update_user, delete_user, get_user
-from db.models import UserInDB
 from db.session import db_dependency
-from middleware.auth import get_current_active_user, fake_users_db
+from middleware.auth import get_current_active_admin_user_for_api
 from models.auth import User
 from models.response import GenericResponse
-from service.user import add_new_user, modify_user, remove_user
+from service.user import add_new_user, modify_user, remove_user, get_user_data, get_all_user_data
 
 router = APIRouter(
     prefix="/v1/user",
@@ -15,24 +12,11 @@ router = APIRouter(
 )
 
 
-# async def get_current_active_admin_user(
-#     current_user: Annotated[UserInDB, Depends(get_current_active_user)],
-# ):
-#     if current_user.role != "admin":
-#         raise HTTPException(
-#             status_code=status.HTTP_403_FORBIDDEN,
-#             detail="Only admins can perform this action",
-#         )
-#     return current_user
-
-
-# User Management APIs (admin-only)
 @router.post("", response_model=GenericResponse)
 async def create_new_user(
     user: User,
-    # current_user: Annotated[UserInDB, Depends(get_current_active_admin_user)],
     db: db_dependency
-):
+) -> GenericResponse:
     result = await add_new_user(user, db)
     return GenericResponse(
         success=True,
@@ -41,38 +25,53 @@ async def create_new_user(
     )
 
 
-@router.put("/{username}", response_model=GenericResponse)
+@router.put("/{user_name}", response_model=GenericResponse)
 async def update_user(
     user_name: str,
-    # user: User,
-    # current_user: Annotated[UserInDB, Depends(get_current_active_admin_user)],
+    user: User,
     db: db_dependency
-):
-    await modify_user(db, user_name)
-    return {"msg": "User updated successfully"}
+) -> GenericResponse:
+    result = await modify_user(user_name, user, db)
+    return GenericResponse(
+        success=True,
+        message="User updated",
+        data=result
+    )
 
 
-@router.delete("/{username}", response_model=GenericResponse)
+@router.delete("/{user_name}", response_model=GenericResponse)
 async def delete_admin_user(
     user_name: str,
-    # current_user: Annotated[UserInDB, Depends(get_current_active_admin_user)],
     db: db_dependency
-):
-    await remove_user(db, user_name)
-    return {"msg": "User deleted successfully"}
+) -> GenericResponse:
+    _ = await remove_user(db, user_name)
+    return GenericResponse(
+        success=True,
+        message="User deleted",
+        data=""
+    )
 
 
 @router.get("/{user_name}", response_model=GenericResponse)
-async def get_admin_user(
+async def get_user(
     user_name: str,
-    # current_user: Annotated[UserInDB, Depends(get_current_active_admin_user)],
     db: db_dependency
-):
-    user = get_user(db, user_name)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+) -> GenericResponse:
+    user = await get_user_data(user_name, db)
     return GenericResponse(
-        succcess=True,
+        success=True,
         message="User data found",
         data=user
+    )
+
+
+@router.get("", response_model=GenericResponse)
+async def get_all_user(
+    db: db_dependency
+) -> GenericResponse:
+    users = await get_all_user_data(db)
+    return GenericResponse(
+        success=True,
+        message="Success",
+        data=users
     )

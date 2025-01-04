@@ -4,7 +4,9 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from api import api_admin_routers
 from api import api_routers
+from api import auth_routers
 from db.session import create_db_and_tables
 from exception.exception_handler import add_exception_handler
 
@@ -32,6 +34,8 @@ app.add_middleware(
 )
 
 app.include_router(api_routers)
+app.include_router(api_admin_routers)
+app.include_router(auth_routers)
 add_exception_handler(app)
 
 

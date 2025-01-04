@@ -19,9 +19,22 @@ async def create(task: Task, db):
         raise CrudException("Unable to create the task due to a database error.")
 
 
+async def get_all(db):
+    try:
+        task = db.query(Task).all()
+        return task
+    except SQLAlchemyError as e:
+        logger.error(e)
+        raise CrudException(f"Unable to get the tasks due to a database error: {e}")
+
+
 async def get(task_id: int, db):
-    task = db.query(Task).filter(Task.id == task_id).one_or_none()
-    return task
+    try:
+        task = db.query(Task).filter(Task.id == task_id).one_or_none()
+        return task
+    except SQLAlchemyError as e:
+        logger.error(e)
+        raise CrudException(f"Unable to get the task due to a database error: {e}")
 
 
 async def update(task: Task, db):

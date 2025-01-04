@@ -1,46 +1,27 @@
+import logging
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Dict, Optional
+from typing import Annotated, Optional
 
 import jwt
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
-from passlib.context import CryptContext
 
+from config.config import SECRET_KEY, ALGORITHM
 from crud.user import get_user
 from db.models import UserInDB
 from db.session import get_db_session
+from exception.exception import UnauthorizedException
+from service.user import user_roles
+from util.util import verify_password
 
-# Configurations
-SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+logger = logging.getLogger(__name__)
 
-# Password Hashing Context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+# ALGORITHM = "HS256"
+# ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# OAuth2 Scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-# Mock Database (Replace with real DB interaction layer)
-fake_users_db = {
-    "johndoe": {
-        "username": "johndoe",
-        "full_name": "John Doe",
-        "email": "johndoe@example.com",
-        "hashed_password": pwd_context.hash("secret"),
-        "disabled": False,
-    }
-}
-
-
-# Utility Functions
-async def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-
-async def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
 
 
 async def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -51,62 +32,59 @@ async def create_access_token(data: dict, expires_delta: Optional[timedelta] = N
 
 
 async def get_user_by_user_name(db, user_name: str) -> Optional[UserInDB]:
-    user = await get_user(db, user_name)
+    user = await get_user(user_name, db)
     return user
 
 
-async def authenticate_user(db: Dict[str, Dict], username: str, password: str) -> Optional[UserInDB]:
+async def authenticate_user(db, username: str, password: str) -> Optional[UserInDB]:
     user = await get_user_by_user_name(db, username)
-    if user and verify_password(password, user.hashed_password):
+    if user and await verify_password(password, user.hashed_password):
         return user
     return None
 
 
-# Dependency to get current user from token
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> UserInDB:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
+        role: str = payload.get("role")
         if username is None:
-            raise credentials_exception
-    except InvalidTokenError:
-        raise credentials_exception
-    user = await get_user_by_user_name(get_db_session, username)
+            logger.error("Could not validate credentials: User name not found")
+            raise UnauthorizedException()
+    except InvalidTokenError as e:
+        logger.error(f"Could not validate credentials: {e}")
+        raise UnauthorizedException()
+    user = await get_user_by_user_name(get_db_session(), username)
     if user is None:
-        raise credentials_exception
+        logger.error("Could not validate credentials: user not found in db")
+        raise UnauthorizedException()
+    if user.role.role_name != role:
+        logger.error("Could not validate credentials: user role does not match")
+        raise UnauthorizedException()
     return user
 
 
 async def get_current_active_user(current_user: Annotated[UserInDB, Depends(get_current_user)]) -> UserInDB:
     if current_user.disabled:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        logger.warning("Inactive user")
+        raise UnauthorizedException()
     return current_user
 
 
-# @app.post("/token", response_model=Token)
-# async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
-#     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
-#     if not user:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Incorrect username or password",
-#             headers={"WWW-Authenticate": "Bearer"},
-#         )
-#     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-#     access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
-#     return Token(access_token=access_token, token_type="bearer")
+async def get_current_active_admin_user_for_api(
+    current_user: Annotated[UserInDB, Depends(get_current_active_user)],
+):
+    if current_user.role.role_name != "admin":
+        logger.warning("Only admins can perform this action")
+        raise UnauthorizedException()
+    return current_user
 
 
-# @app.get("/users/me/", response_model=User)
-# async def read_users_me(current_user: Annotated[User, Depends(get_current_active_user)]) -> User:
-#     return current_user
-#
-#
-# @app.get("/users/me/items/")
-# async def read_own_items(current_user: Annotated[User, Depends(get_current_active_user)]):
-#     return [{"item_id": "Foo", "owner": current_user.username}]
+async def get_current_active_user_for_api(
+    current_user: Annotated[UserInDB, Depends(get_current_active_user)],
+):
+    existing_user_roles = await user_roles(get_db_session())
+    if current_user.role.role_name not in existing_user_roles:
+        logger.warning("Unauthorized access")
+        raise UnauthorizedException()
+    return current_user
