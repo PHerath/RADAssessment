@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from db.session import db_dependency
 from middleware.auth import get_current_active_user_for_api
 from models.response import GenericResponse
-from models.task import TaskModel
+from models.task import TaskModel, UpdateTaskModel
 from service.task import create_new_task, modify_task, get_task, remove_task, get_all_task
 
 router = APIRouter(
@@ -43,7 +43,7 @@ async def add_new_task(task: TaskModel, db: db_dependency):
 
 
 @router.put("/{task_id}", response_model=GenericResponse)
-async def modify(task_id: int, task: TaskModel, db: db_dependency):
+async def modify(task_id: int, task: UpdateTaskModel, db: db_dependency):
     result = await modify_task(task_id, task, db)
     return GenericResponse(
         success=True,

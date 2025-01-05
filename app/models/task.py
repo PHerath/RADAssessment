@@ -1,12 +1,18 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
 
 class TaskModel(BaseModel):
     name: str
-    type: str
-    description: str
+    type: Optional[str]
+    description: Optional[str]
+
+
+class UpdateTaskModel(BaseModel):
+    type: Optional[str]
+    description: Optional[str]
 
 
 class CreateTaskResponse(BaseModel):
