@@ -17,10 +17,6 @@ from util.util import verify_password
 
 logger = logging.getLogger(__name__)
 
-# SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
-# ALGORITHM = "HS256"
-# ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
@@ -38,7 +34,7 @@ async def get_user_by_user_name(db, user_name: str) -> Optional[UserInDB]:
 
 async def authenticate_user(db, username: str, password: str) -> Optional[UserInDB]:
     user = await get_user_by_user_name(db, username)
-    if user and await verify_password(password, user.hashed_password):
+    if user and verify_password(password, user.hashed_password):
         return user
     return None
 

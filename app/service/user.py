@@ -17,7 +17,7 @@ async def add_new_user(user: User, db):
     role = await get_user_role(user.role, db)
     if not role:
         raise NoDataFoundException("Role does not exist")
-    hashed_pwd = await get_password_hash(user.password)
+    hashed_pwd = get_password_hash(user.password)
     _user = UserInDB(
         user_name=user.user_name,
         email=user.email,
