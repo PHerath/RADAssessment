@@ -5,8 +5,9 @@ from fastapi import APIRouter
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from config.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from db.session import db_dependency
-from middleware.auth import authenticate_user, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token
+from middleware.auth import authenticate_user, create_access_token
 from models.auth import Token
 
 router = APIRouter(
